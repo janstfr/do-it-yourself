@@ -2,17 +2,19 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+    provider        = "prisma-client-js"
     previewFeatures = ["jsonProtocol"]
 }
 
 datasource db {
-    provider = "sqlite"
-    // NOTE: When using mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-    // Further reading:
-    // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-    // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
+    provider = "cockroachdb"
     url      = env("DATABASE_URL")
+}
+
+model Widget {
+    id    String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+    name  String
+    price Float
 }
 
 model Example {
@@ -49,19 +51,35 @@ model Session {
 }
 
 model User {
-    id            String    @id @default(cuid())
+    id            String    @id @unique @default(cuid())
     name          String?
+    password      String?
     email         String?   @unique
+    test          String?
     emailVerified DateTime?
     image         String?
     accounts      Account[]
     sessions      Session[]
+    likes         String[]
+    posts         Post[]    @relation("WrittenPosts")
+    favoritePosts Post[]    @relation("FavoritePosts")
 }
 
-model VerificationToken {
-    identifier String
-    token      String   @unique
-    expires    DateTime
+model Post {
+    id            String     @id @unique @default(uuid())
+    createdAt     DateTime   @default(now())
+    updatedAt     DateTime   @updatedAt
+    title         String
+    content       String
+    authorId      String
+    author        User       @relation("WrittenPosts", fields: [authorId], references: [id])
+    favoritedBy   User?      @relation("FavoritePosts", fields: [favoritedById], references: [id])
+    favoritedById String?
+    categories    Category[]
+}
 
-    @@unique([identifier, token])
+model Category {
+    id    String @id @unique @default(uuid())
+    name  String
+    posts Post[]
 }
